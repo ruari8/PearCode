@@ -44,6 +44,17 @@ interface CliInput {
   readonly logWebSocketEvents: Option.Option<boolean>;
 }
 
+function parseEnabledProviders(raw: string | undefined): ReadonlyArray<"codex" | "opencode"> {
+  const providers = (raw ?? "opencode")
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value): value is "codex" | "opencode" => value === "codex" || value === "opencode");
+  if (providers.length === 0) {
+    return ["opencode"];
+  }
+  return Array.from(new Set(providers));
+}
+
 /**
  * CliConfigShape - Startup helpers required while building server layers.
  */
@@ -120,6 +131,14 @@ const CliEnvConfig = Config.all({
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
+  enabledProviders: Config.string("T3CODE_ENABLED_PROVIDERS").pipe(
+    Config.option,
+    Config.map((value) => parseEnabledProviders(Option.getOrUndefined(value))),
+  ),
+  showLegacyCodex: Config.boolean("T3CODE_SHOW_LEGACY_CODEX").pipe(
+    Config.option,
+    Config.map((value) => Option.getOrUndefined(value) ?? false),
+  ),
 });
 
 const resolveBooleanFlag = (flag: Option.Option<boolean>, envValue: boolean) =>
@@ -187,6 +206,8 @@ const ServerConfigLive = (input: CliInput) =>
         authToken,
         autoBootstrapProjectFromCwd,
         logWebSocketEvents,
+        enabledProviders: env.enabledProviders,
+        showLegacyCodex: env.showLegacyCodex,
       } satisfies ServerConfigShape;
 
       return config;

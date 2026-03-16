@@ -51,19 +51,23 @@ describe("resolveModelSlug", () => {
     }
   });
   it("keeps codex defaults for backward compatibility", () => {
-    expect(getDefaultModel()).toBe(DEFAULT_MODEL_BY_PROVIDER.codex);
-    expect(getModelOptions()).toEqual(MODEL_OPTIONS_BY_PROVIDER.codex);
+    expect(getDefaultModel()).toBe(DEFAULT_MODEL_BY_PROVIDER.opencode);
+    expect(getModelOptions()).toEqual(MODEL_OPTIONS_BY_PROVIDER.opencode);
+    expect(getDefaultModel("codex")).toBe(DEFAULT_MODEL_BY_PROVIDER.codex);
+    expect(getModelOptions("codex")).toEqual(MODEL_OPTIONS_BY_PROVIDER.codex);
   });
 });
 
 describe("getReasoningEffortOptions", () => {
   it("returns codex reasoning options for codex", () => {
     expect(getReasoningEffortOptions("codex")).toEqual(["xhigh", "high", "medium", "low"]);
+    expect(getReasoningEffortOptions("opencode")).toEqual(["xhigh", "high", "medium", "low"]);
   });
 });
 
 describe("getDefaultReasoningEffort", () => {
   it("returns provider-scoped defaults", () => {
     expect(getDefaultReasoningEffort("codex")).toBe("high");
+    expect(getDefaultReasoningEffort("opencode")).toBe("high");
   });
 });

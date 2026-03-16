@@ -29,6 +29,11 @@ export interface ProviderAdapterRegistryShape {
    * List provider kinds currently registered.
    */
   readonly listProviders: () => Effect.Effect<ReadonlyArray<ProviderKind>>;
+
+  /**
+   * Check if a provider is enabled for new sessions.
+   */
+  readonly isProviderEnabled: (provider: ProviderKind) => Effect.Effect<boolean>;
 }
 
 /**

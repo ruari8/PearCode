@@ -116,6 +116,18 @@ export class ProviderUnsupportedError extends Schema.TaggedErrorClass<ProviderUn
   }
 }
 
+export class ProviderDisabledError extends Schema.TaggedErrorClass<ProviderDisabledError>()(
+  "ProviderDisabledError",
+  {
+    provider: Schema.String,
+    cause: Schema.optional(Schema.Defect),
+  },
+) {
+  override get message(): string {
+    return `Provider '${this.provider}' is disabled`;
+  }
+}
+
 /**
  * ProviderSessionNotFoundError - Provider-facing session not found.
  */
@@ -157,6 +169,7 @@ export type ProviderAdapterError =
 export type ProviderServiceError =
   | ProviderValidationError
   | ProviderUnsupportedError
+  | ProviderDisabledError
   | ProviderSessionNotFoundError
   | ProviderSessionDirectoryPersistenceError
   | ProviderAdapterError

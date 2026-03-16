@@ -28,6 +28,8 @@ export interface ServerConfigShape {
   readonly authToken: string | undefined;
   readonly autoBootstrapProjectFromCwd: boolean;
   readonly logWebSocketEvents: boolean;
+  readonly enabledProviders: ReadonlyArray<"codex" | "opencode">;
+  readonly showLegacyCodex: boolean;
 }
 
 /**
@@ -54,6 +56,8 @@ export class ServerConfig extends ServiceMap.Service<ServerConfig, ServerConfigS
           staticDir: undefined,
           devUrl: undefined,
           noBrowser: false,
+          enabledProviders: ["opencode"],
+          showLegacyCodex: false,
         };
       }),
     );

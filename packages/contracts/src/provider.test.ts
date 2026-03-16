@@ -42,6 +42,32 @@ describe("ProviderSessionStartInput", () => {
       }),
     ).toThrow();
   });
+
+  it("accepts opencode-compatible payloads", () => {
+    const parsed = decodeProviderSessionStartInput({
+      threadId: "thread-1",
+      provider: "opencode",
+      cwd: "/tmp/workspace",
+      model: "github-copilot/gpt-5.4",
+      modelOptions: {
+        opencode: {
+          reasoningEffort: "high",
+        },
+      },
+      runtimeMode: "full-access",
+      providerOptions: {
+        opencode: {
+          binaryPath: "/usr/local/bin/opencode",
+          baseUrl: "http://127.0.0.1:4096",
+        },
+      },
+    });
+
+    expect(parsed.provider).toBe("opencode");
+    expect(parsed.modelOptions?.opencode?.reasoningEffort).toBe("high");
+    expect(parsed.providerOptions?.opencode?.binaryPath).toBe("/usr/local/bin/opencode");
+    expect(parsed.providerOptions?.opencode?.baseUrl).toBe("http://127.0.0.1:4096");
+  });
 });
 
 describe("ProviderSendTurnInput", () => {

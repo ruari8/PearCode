@@ -4,6 +4,7 @@ import { Effect, Schema } from "effect";
 
 import {
   DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_PROVIDER_KIND,
   DEFAULT_RUNTIME_MODE,
   OrchestrationGetTurnDiffInput,
   OrchestrationSession,
@@ -113,6 +114,7 @@ it.effect("decodes thread.turn.start defaults for provider and runtime mode", ()
       createdAt: "2026-01-01T00:00:00.000Z",
     });
     assert.strictEqual(parsed.provider, undefined);
+    assert.strictEqual(DEFAULT_PROVIDER_KIND, "opencode");
     assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
     assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
   }),

@@ -12,6 +12,7 @@
 import {
   NonNegativeInt,
   ThreadId,
+  type ProviderKind,
   ProviderInterruptTurnInput,
   ProviderRespondToRequestInput,
   ProviderRespondToUserInputInput,
@@ -23,7 +24,7 @@ import {
 } from "@t3tools/contracts";
 import { Effect, Layer, Option, PubSub, Queue, Schema, SchemaIssue, Stream } from "effect";
 
-import { ProviderValidationError } from "../Errors.ts";
+import { ProviderDisabledError, ProviderValidationError } from "../Errors.ts";
 import { ProviderAdapterRegistry } from "../Services/ProviderAdapterRegistry.ts";
 import { ProviderService, type ProviderServiceShape } from "../Services/ProviderService.ts";
 import {
@@ -239,6 +240,14 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         return { adapter, session: resumed } as const;
       });
 
+    const ensureProviderEnabled = (provider: ProviderKind) =>
+      Effect.gen(function* () {
+        const enabled = yield* registry.isProviderEnabled(provider);
+        if (!enabled) {
+          return yield* Effect.fail(new ProviderDisabledError({ provider }));
+        }
+      });
+
     const resolveRoutableSession = (input: {
       readonly threadId: ThreadId;
       readonly operation: string;
@@ -279,8 +288,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         const input = {
           ...parsed,
           threadId,
-          provider: parsed.provider ?? "codex",
+          provider: parsed.provider ?? "opencode",
         };
+        yield* ensureProviderEnabled(input.provider);
         const adapter = yield* registry.getByProvider(input.provider);
         const session = yield* adapter.startSession(input);
 

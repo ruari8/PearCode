@@ -24,6 +24,7 @@ import { Effect, Fiber, Layer, Option, PubSub, Ref, Stream } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import {
+  ProviderDisabledError,
   ProviderAdapterSessionNotFoundError,
   ProviderUnsupportedError,
   ProviderValidationError,
@@ -223,6 +224,7 @@ function makeProviderServiceLayer() {
         ? Effect.succeed(codex.adapter)
         : Effect.fail(new ProviderUnsupportedError({ provider })),
     listProviders: () => Effect.succeed(["codex"]),
+    isProviderEnabled: (provider) => Effect.succeed(provider === "codex"),
   };
 
   const providerAdapterLayer = Layer.succeed(ProviderAdapterRegistry, registry);
@@ -264,6 +266,7 @@ it.effect("ProviderServiceLive keeps persisted resumable sessions on startup", (
           ? Effect.succeed(codex.adapter)
           : Effect.fail(new ProviderUnsupportedError({ provider })),
       listProviders: () => Effect.succeed(["codex"]),
+      isProviderEnabled: (provider) => Effect.succeed(provider === "codex"),
     };
 
     const persistenceLayer = makeSqlitePersistenceLive(dbPath);
@@ -334,6 +337,7 @@ it.effect(
             ? Effect.succeed(firstCodex.adapter)
             : Effect.fail(new ProviderUnsupportedError({ provider })),
         listProviders: () => Effect.succeed(["codex"]),
+        isProviderEnabled: (provider) => Effect.succeed(provider === "codex"),
       };
 
       const firstDirectoryLayer = ProviderSessionDirectoryLive.pipe(
@@ -373,6 +377,7 @@ it.effect(
             ? Effect.succeed(secondCodex.adapter)
             : Effect.fail(new ProviderUnsupportedError({ provider })),
         listProviders: () => Effect.succeed(["codex"]),
+        isProviderEnabled: (provider) => Effect.succeed(provider === "codex"),
       };
       const secondDirectoryLayer = ProviderSessionDirectoryLive.pipe(
         Layer.provide(runtimeRepositoryLayer),
@@ -869,6 +874,42 @@ validation.layer("ProviderServiceLive validation", (it) => {
       if (Option.isSome(runtime)) {
         assert.equal(runtime.value.threadId, session.threadId);
       }
+    }),
+  );
+
+  it.effect("rejects disabled providers before adapter startup", () =>
+    Effect.gen(function* () {
+      const disabledRegistry: typeof ProviderAdapterRegistry.Service = {
+        getByProvider: (provider) =>
+          provider === "codex"
+            ? Effect.succeed(validation.codex.adapter)
+            : Effect.fail(new ProviderUnsupportedError({ provider })),
+        listProviders: () => Effect.succeed(["codex", "opencode"]),
+        isProviderEnabled: (provider) => Effect.succeed(provider === "codex"),
+      };
+
+      const runtimeRepositoryLayer = ProviderSessionRuntimeRepositoryLive.pipe(
+        Layer.provide(SqlitePersistenceMemory),
+      );
+      const directoryLayer = ProviderSessionDirectoryLive.pipe(Layer.provide(runtimeRepositoryLayer));
+      const providerLayer = makeProviderServiceLive().pipe(
+        Layer.provide(Layer.succeed(ProviderAdapterRegistry, disabledRegistry)),
+        Layer.provide(directoryLayer),
+        Layer.provide(AnalyticsService.layerTest),
+      );
+
+      const result = yield* Effect.result(
+        Effect.gen(function* () {
+          const provider = yield* ProviderService;
+          return yield* provider.startSession(asThreadId("thread-disabled"), {
+            provider: "opencode",
+            threadId: asThreadId("thread-disabled"),
+            runtimeMode: "full-access",
+          });
+        }).pipe(Effect.provide(providerLayer)),
+      );
+
+      assertFailure(result, new ProviderDisabledError({ provider: "opencode" }));
     }),
   );
 });

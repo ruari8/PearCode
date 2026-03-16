@@ -10,6 +10,7 @@
  */
 import * as OS from "node:os";
 import type {
+  ProviderKind,
   ServerProviderAuthStatus,
   ServerProviderStatus,
   ServerProviderStatusState,
@@ -22,10 +23,12 @@ import {
   isCodexCliVersionSupported,
   parseCodexCliVersion,
 } from "../codexCliVersion";
+import { ServerConfig } from "../../config.ts";
 import { ProviderHealth, type ProviderHealthShape } from "../Services/ProviderHealth";
 
 const DEFAULT_TIMEOUT_MS = 4_000;
 const CODEX_PROVIDER = "codex" as const;
+const OPENCODE_PROVIDER = "opencode" as const;
 
 // ── Pure helpers ────────────────────────────────────────────────────
 
@@ -395,13 +398,37 @@ export const checkCodexProviderStatus: Effect.Effect<
 export const ProviderHealthLive = Layer.effect(
   ProviderHealth,
   Effect.gen(function* () {
+    const config = yield* ServerConfig;
+    const enabledProviders = new Set<ProviderKind>(config.enabledProviders);
     const codexStatusFiber = yield* checkCodexProviderStatus.pipe(
-      Effect.map(Array.of),
+      Effect.map((status) => [status]),
       Effect.forkScoped,
     );
 
+    const now = new Date().toISOString();
+
+    const opencodeStatus: ServerProviderStatus = {
+      provider: OPENCODE_PROVIDER,
+      status: "ready",
+      available: true,
+      enabled: enabledProviders.has(OPENCODE_PROVIDER),
+      authStatus: "unknown",
+      checkedAt: now,
+      message: "OpenCode provider is configured through the local server sidecar.",
+    };
+
     return {
-      getStatuses: Fiber.join(codexStatusFiber),
+      getStatuses: Fiber.join(codexStatusFiber).pipe(
+        Effect.map((statuses) =>
+          [
+            ...statuses.map((status) => ({
+              ...status,
+              enabled: enabledProviders.has(status.provider),
+            })),
+            opencodeStatus,
+          ] satisfies ReadonlyArray<ServerProviderStatus>,
+        ),
+      ),
     } satisfies ProviderHealthShape;
   }),
 );
